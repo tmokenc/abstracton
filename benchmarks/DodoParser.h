@@ -3,7 +3,13 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
+#if __has_include(<jsoncpp/json/json.h>)
 #include <jsoncpp/json/json.h>
+#elif __has_include(<json/json.h>)
+#include <json/json.h>
+#else
+#error "Could not find a jsoncpp header"
+#endif
 #include <stdexcept>
 #include <mata/nfa/nfa.hh>
 #include <mata/nft/nft.hh>

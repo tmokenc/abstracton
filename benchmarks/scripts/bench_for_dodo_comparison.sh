@@ -1,9 +1,35 @@
 #!/bin/env bash
 
-mkdir -p results/raw
+set -uo pipefail
 
-parentdir=$(dirname `pwd`)
-benchmarkdir="$parentdir/dodo"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BENCHMARKS_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${BENCHMARKS_DIR}/.." && pwd)"
+RESULTS_DIR="${SCRIPT_DIR}/results/raw"
+
+resolve_solver() {
+  local candidate
+  for candidate in \
+    "${REPO_ROOT}/build/benchmarks/solve_dodo_tree" \
+    "${BENCHMARKS_DIR}/build/solve_dodo_tree"
+  do
+    if [[ -x "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+
+  echo "Could not find solve_dodo binary." >&2
+  echo "Expected one of:" >&2
+  echo "  ${REPO_ROOT}/build/benchmarks/solve_dodo_tree" >&2
+  echo "  ${BENCHMARKS_DIR}/build/solve_dodo_tree" >&2
+  exit 1
+}
+
+mkdir -p "${RESULTS_DIR}"
+
+SOLVER="$(resolve_solver)"
+benchmarkdir="${BENCHMARKS_DIR}/dodo"
 
 INPUTS=(
   [0]="t s f tf sf ts tsf:$benchmarkdir/Berkeley.json exclusiveexclusive"
@@ -15,15 +41,15 @@ INPUTS=(
   [6]="t s f:$benchmarkdir/Dijkstra-Scholten.json twob"
   [7]="t s f:$benchmarkdir/Dijkstra-Scholten.json twod"
   [8]="t s f:$benchmarkdir/Dijkstra-Scholten.json deadlock"
-  [9]="t s f ts:$benchmarkdir/Dijkstra-ring.json nomutex"
-  [10]="t s f:$benchmarkdir/Dijkstra-ring.json deadlock"
-  [11]="t s f sf:$benchmarkdir/DijkstraMutEx.json nomutex"
-  [12]="t s f:$benchmarkdir/DijkstraMutEx.json deadlock"
-  [13]="t s f sf:$benchmarkdir/FutureBus.json pendingrightsecond"
-  [14]="t s f tf sf ts tsf:$benchmarkdir/FutureBus.json sharedexclusive"
-  [15]="t s f sf:$benchmarkdir/FutureBus.json secondpending"
-  [16]="t s f tf sf ts tsf:$benchmarkdir/FutureBus.json exclusiveexclusive"
-  [17]="t s f:$benchmarkdir/FutureBus.json deadlock"
+  # [9]="t s f ts:$benchmarkdir/Dijkstra-ring.json nomutex"
+  # [10]="t s f:$benchmarkdir/Dijkstra-ring.json deadlock"
+  # [11]="t s f sf:$benchmarkdir/DijkstraMutEx.json nomutex"
+  # [12]="t s f:$benchmarkdir/DijkstraMutEx.json deadlock"
+  # [13]="t s f sf:$benchmarkdir/FutureBus.json pendingrightsecond"
+  # [14]="t s f tf sf ts tsf:$benchmarkdir/FutureBus.json sharedexclusive"
+  # [15]="t s f sf:$benchmarkdir/FutureBus.json secondpending"
+  # [16]="t s f tf sf ts tsf:$benchmarkdir/FutureBus.json exclusiveexclusive"
+  # [17]="t s f:$benchmarkdir/FutureBus.json deadlock"
   [18]="t s f sf:$benchmarkdir/Herman.json notoken"
   [19]="t s f tf sf ts tsf:$benchmarkdir/Illinois.json dirtydirty"
   [20]="t s f tf sf ts tsf:$benchmarkdir/Illinois.json dirtyshared"
@@ -45,8 +71,8 @@ INPUTS=(
   [36]="t s f sf:$benchmarkdir/atomic-dining-philosophers.json deadlock"
   [37]="t s f sf:$benchmarkdir/bakery.json nomutex"
   [38]="t s f:$benchmarkdir/dining-cryptographers.json internal"
-  [39]="t s f:$benchmarkdir/dining-cryptographers.json external"
-  [40]="t s f sf:$benchmarkdir/dragon.json dirtydirty"
+  # [39]="t s f:$benchmarkdir/dining-cryptographers.json external"
+  # [40]="t s f sf:$benchmarkdir/dragon.json dirtydirty"
   [41]="t s f sf:$benchmarkdir/dragon.json exclusiveexclusive"
   [42]="t s f sf:$benchmarkdir/dragon.json dirtysharedexclusive"
   [43]="t s f sf:$benchmarkdir/dragon.json exclusiveshared"
@@ -90,7 +116,7 @@ do
         time systemd-run --user --scope \
               -p MemoryMax=32G \
               -p MemorySwapMax=7G \
-              timeout $TIMEOUT "${parentdir}/solve_dodo" -i $MODE -p $PROPERTY $FILE
+              timeout "$TIMEOUT" "${SOLVER}" -i "$MODE" -p "$PROPERTY" "$FILE"
 		echo "********************"
       fi
     done

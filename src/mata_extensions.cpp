@@ -48,7 +48,7 @@ namespace mata::ext {
         Nfa aut_det {determinize(aut)};
         Nft result =  mata::nft::builder::from_nfa_with_levels_advancing(aut_det, levels);
         result.alphabet = nft.alphabet;
-        result.alphabets = nft.alphabets;
+        result.set_level_alphabets(nft.level_alphabets);
         return result;
     }
 
@@ -61,7 +61,7 @@ namespace mata::ext {
         Nfa aut_min {mata::nfa::algorithms::minimize_hopcroft(aut_det)};
         Nft result =  mata::nft::builder::from_nfa_with_levels_advancing(aut_min, levels);
         result.alphabet = nft.alphabet;
-        result.alphabets = nft.alphabets;
+        result.set_level_alphabets(nft.level_alphabets);
         return result;
     }
 
@@ -141,7 +141,7 @@ namespace mata::ext {
 
         result.final = new_final_states;
         result.alphabet = aut.alphabet;
-        result.alphabets = aut.alphabets;
+        result.set_level_alphabets(aut.level_alphabets);
         return result;
     }
 
@@ -151,10 +151,15 @@ namespace mata::ext {
 
     mata::nft::Nft create_sigma_star_nft(int number_of_levels, Alphabet* alphabet, const std::optional<const std::vector<Alphabet*>> alphabets) {
         if (number_of_levels == 0) {
-            return mata::nft::Nft::with_levels(0, 1, {0}, {0}, alphabet, alphabets);
+            if (alphabets.has_value()) {
+                return mata::nft::Nft::with_levels(0, 1, {0}, {0}, alphabets.value());
+            }
+            return mata::nft::Nft::with_levels(0, 1, {0}, {0}, alphabet);
         }
 
-        Nft result = mata::nft::Nft::with_levels(number_of_levels, number_of_levels, {0}, {0}, alphabet, alphabets);
+        Nft result = alphabets.has_value()
+                ? mata::nft::Nft::with_levels(number_of_levels, number_of_levels, {0}, {0}, alphabets.value())
+                : mata::nft::Nft::with_levels(number_of_levels, number_of_levels, {0}, {0}, alphabet);
 
         for (int i = 0; i < number_of_levels; ++i) {
             result.levels[i] = i;
@@ -420,8 +425,8 @@ namespace mata::ext {
                 } else {
                     // i + j is the next old level
                     old_to_new_levels.push_back(i + j);
-                    if (aut.alphabets.has_value()) {
-                        new_alphabets[i + j] = aut.alphabets.value()[i];
+                    if (!aut.level_alphabets.empty()) {
+                        new_alphabets[i + j] = aut.level_alphabets[i];
                     }
                     i++;
                 }
@@ -522,7 +527,7 @@ namespace mata::ext {
         }
 
         // update alphabets
-        result.alphabets = std::make_optional(new_alphabets);
+        result.set_level_alphabets(new_alphabets);
 
         return result;
     }
@@ -549,8 +554,8 @@ namespace mata::ext {
         std::vector<Alphabet*> alphabets(total_number_of_tapes, nullptr);
         for (int i = 0; i < nfts.size(); ++i) {
             for (int j = 0; j < nfts[i].levels.num_of_levels; ++j) {
-                if (nfts[i].alphabets.has_value()) {
-                    alphabets[start_indices[i] + j] = nfts[i].alphabets.value()[j];
+                if (!nfts[i].level_alphabets.empty()) {
+                    alphabets[start_indices[i] + j] = nfts[i].level_alphabets[j];
                 } else if (nfts[i].alphabet != nullptr) {
                     alphabets[start_indices[i] + j] = nfts[i].alphabet;
                 } else {

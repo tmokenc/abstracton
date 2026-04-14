@@ -25,7 +25,7 @@ std::pair<mata::nft::Nft, std::shared_ptr<mata::OnTheFlyAlphabet>> trapInterpret
 
     std::vector<mata::Alphabet*> alphabets {powerset_OnTheFlyAlphabet.get(), string_alphabet};
 
-    mata::nft::Nft result = mata::nft::Nft::with_levels(2, 0, {}, {}, nullptr, alphabets);
+    mata::nft::Nft result = mata::nft::Nft::with_levels(2, 0, {}, {}, alphabets);
 
     // construct automaton
     // states:
