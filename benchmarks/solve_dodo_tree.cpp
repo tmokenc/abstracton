@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
         interpretation_result.second;
 
     TICK();
-    SymbolicAutomataTree tree;
+    SymbolicFormula tree;
 
     const Term initial_term = tree.make_term(dpr.initialConfig);
     const Term delta_term = tree.make_term(dpr.transitionRelation);
