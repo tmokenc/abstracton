@@ -177,8 +177,9 @@ mata::nft::Nft parseTransducer(Json::Value t, mata::OnTheFlyAlphabet* string_alp
     }
 
     // build mata nft (dodo benchmarks ALL have exactly 2 levels)
+    // The alphabets pointer is filled in by parseDodoJSON once the AlphabetLevels owner exists.
     mata::nft::Nft result = mata::nft::Nft::with_levels(
-            2, states.size(), initial_state_indices, final_state_indices, string_alphabet);
+            2, states.size(), initial_state_indices, final_state_indices);
 
     for (auto d : transitions) {
         // TODO add "add" function of signature (State, string, State) to delta in mata if OnTheFlyAlphabet specified
@@ -275,13 +276,19 @@ DodoParserResult parseDodoJSON(std::string filepath, int verbosityLevel) {
     logging::log(logging::VerbosityLevel::DEBUG, "parser: alphabet " + stream_to_string(string_alphabet_ptr->get_alphabet_symbols()) + " still intact!", verbosityLevel);
     logging::log(logging::VerbosityLevel::DEBUG, "parser: transition relation:", verbosityLevel);
     logging::logexp(logging::VerbosityLevel::DEBUG, [&]() { return t.print_to_dot(); }, verbosityLevel);
-    assert(string_alphabet_ptr->is_equal(t.alphabet));
+
+    // Wrap the shared string alphabet as an AlphabetLevels in Global mode (same alphabet on every
+    // level of the transducer) and own it inside DodoParserResult so its address stays stable.
+    auto alphabet_levels_ptr = std::make_shared<mata::AlphabetLevels>(string_alphabet_ptr.get());
+    t.alphabets = alphabet_levels_ptr.get();
+    assert(t.alphabets != nullptr && string_alphabet_ptr->is_equal(t.alphabets->for_level(0)));
 
     return DodoParserResult {
         string_alphabet_ptr,
+        alphabet_levels_ptr,
         initialConfig,
         properties,
         propertyNames,
         t
     };
-} 
+}

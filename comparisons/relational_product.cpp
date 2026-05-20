@@ -29,9 +29,9 @@ int main() {
 
         mata::EnumAlphabet alph0 = {0, 1};
         mata::EnumAlphabet alph1 = {0, 1, 2};
-        std::vector<mata::Alphabet*> alphabets = {&alph0, &alph1};
-        aut1.set_level_alphabets(alphabets);
-        aut2.set_level_alphabets(alphabets);
+        mata::AlphabetLevels alphabet_levels{std::vector<mata::Alphabet*>{&alph0, &alph1}};
+        aut1.alphabets = &alphabet_levels;
+        aut2.alphabets = &alphabet_levels;
 
         std::cout << "Seed: " << seed.value() << std::endl;
 

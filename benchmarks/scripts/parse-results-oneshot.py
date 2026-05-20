@@ -84,18 +84,6 @@ def print_as_csv(dicts, filename, header=True):
                 d_keys.append("NA")
         filename.write(",".join(d_keys) + "\n")
 
-csv_output_path = results_folder / "oneshot_comparison_mata.csv"
-
-# read results from raw file
-def read_results():
-    with open(results_folder / "raw" / "results_for_dodo_comparison.log") as f:
-        results = parse_raw_bench(f)
-        return [{k: v for k, v in result.items() if k not in ["solved", "unsolved"]} for result in results]
-
-# write results to csv files
-with open(csv_output_path, "w") as f:
-    print_as_csv(read_results(), f, True)
-
 ### dodo parsing ###
 
 def parse_dodo(filename):
@@ -132,17 +120,26 @@ def parse_dodo(filename):
 
     return results
 
-# if dodo results are present: parse dodo results
-dodo_path = results_folder / "raw" / "dodo_oneshot.txt"
+# Generic pipeline: every *.log under results/raw/ is parsed into the equivalent
+# *.csv under results/. dodo* logs are parsed with parse_dodo; everything else
+# uses parse_raw_bench (the abstracton/mata raw-bench format).
+raw_dir = results_folder / "raw"
+raw_dir.mkdir(parents=True, exist_ok=True)
 
-if dodo_path.exists():
-    with open(dodo_path) as dodo_f:
-        dodo_results = parse_dodo(dodo_f)
-        with open(results_folder / "oneshot_comparison_dodo.csv", "w") as f:
-            print_as_csv(dodo_results, f)
+for log_path in sorted(raw_dir.glob("*.log")):
+    csv_path = results_folder / (log_path.stem + ".csv")
+    with open(log_path) as f:
+        if log_path.stem.startswith("dodo"):
+            rows = parse_dodo(f)
+        else:
+            rows = parse_raw_bench(f)
+            rows = [{k: v for k, v in r.items() if k not in ["solved", "unsolved"]} for r in rows]
+    with open(csv_path, "w") as out:
+        print_as_csv(rows, out, True)
+    print(f"{log_path.name} -> {csv_path.name} ({len(rows)} rows)")
 
-# count OOM errors
-dodo_dbg_path = results_folder / "raw" / "dodo_oneshot_debug.txt"
+# count OOM errors (kept as an out-of-band debug aid; unrelated to the *.log pipeline)
+dodo_dbg_path = raw_dir / "dodo_oneshot_debug.txt"
 if dodo_dbg_path.exists():
     with open(dodo_dbg_path) as dodo_dbg:
         oom_counter = 0

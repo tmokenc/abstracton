@@ -23,9 +23,16 @@ std::pair<mata::nft::Nft, std::shared_ptr<mata::OnTheFlyAlphabet>> trapInterpret
 
     std::shared_ptr<mata::OnTheFlyAlphabet> powerset_OnTheFlyAlphabet = std::make_shared<mata::OnTheFlyAlphabet>(mata::OnTheFlyAlphabet(powerset_alphabet));
 
-    std::vector<mata::Alphabet*> alphabets {powerset_OnTheFlyAlphabet.get(), string_alphabet};
+    // AlphabetLevels has non-owning Alphabet* members and itself is referenced (also non-owning)
+    // by Nft::alphabets. Heap-allocate so the object outlives the local scope; the function does
+    // not currently return anything that would keep this owner alive, matching the previous
+    // behaviour where the alphabets vector was discarded after the call.
+    static thread_local std::vector<std::unique_ptr<mata::AlphabetLevels>> interpretation_alphabet_levels_pool;
+    interpretation_alphabet_levels_pool.push_back(std::make_unique<mata::AlphabetLevels>(
+        std::vector<mata::Alphabet*>{powerset_OnTheFlyAlphabet.get(), string_alphabet}));
+    mata::AlphabetLevels* alphabets_ptr = interpretation_alphabet_levels_pool.back().get();
 
-    mata::nft::Nft result = mata::nft::Nft::with_levels(2, 0, {}, {}, alphabets);
+    mata::nft::Nft result = mata::nft::Nft::with_levels(2, 0, {}, {}, alphabets_ptr);
 
     // construct automaton
     // states:

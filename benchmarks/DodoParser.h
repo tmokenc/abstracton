@@ -11,9 +11,11 @@
 #error "Could not find a jsoncpp header"
 #endif
 #include <stdexcept>
+#include <mata/alphabet.hh>
 #include <mata/nfa/nfa.hh>
 #include <mata/nft/nft.hh>
 #include <mata/nfa/delta.hh>
+#include <memory>
 
 #include <abstracton/utils/utils.hpp>
 
@@ -40,6 +42,9 @@ mata::nft::Nft parseTransducer(Json::Value t, int verbosityLevel = logging::DEFA
 struct DodoParserResult {
     // alphabet_encoding char_alphabet_triple;
     std::shared_ptr<mata::OnTheFlyAlphabet> string_alphabet;
+    // Owns the AlphabetLevels object pointed to by transitionRelation.alphabets.
+    // Stored as shared_ptr so DodoParserResult remains copyable.
+    std::shared_ptr<mata::AlphabetLevels> alphabet_levels;
     mata::nfa::Nfa initialConfig;
     std::vector<mata::nfa::Nfa> properties;
     std::vector<std::string> propertyNames;

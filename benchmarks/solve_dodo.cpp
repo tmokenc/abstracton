@@ -127,7 +127,8 @@ int main(int argc, char** argv) {
 
     log(VerbosityLevel::VERBOSE, "parsed file " + filename + ".", verbosityLevel);
     log(VerbosityLevel::DEBUG, "alphabet: " + stream_to_string(dpr.string_alphabet->get_alphabet_symbols()), verbosityLevel);
-    assert(dpr.string_alphabet->is_equal(dpr.transitionRelation.alphabet));
+    assert(dpr.transitionRelation.alphabets != nullptr
+           && dpr.string_alphabet->is_equal(dpr.transitionRelation.alphabets->for_level(0)));
     log(VerbosityLevel::DEBUG, "initial configurations:", verbosityLevel);
     logexp(VerbosityLevel::DEBUG, [&]() { return dpr.initialConfig.print_to_dot(); }, verbosityLevel);
     log(VerbosityLevel::DEBUG, "transition relation:", verbosityLevel);

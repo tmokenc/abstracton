@@ -1,37 +1,61 @@
 library(tidyverse)
- 
-results_mata <- read_csv("results/oneshot_comparison_mata.csv")
-results_dodo <- read_csv("results/oneshot_comparison_dodo.csv") 
 
-results <- full_join(results_mata, results_dodo, by = join_by(name, property, interpretation), suffix = c("_mata", "_dodo"))
+# Auto-discover every *.csv in results/. The basename (sans .csv) is used as
+# the algorithm label throughout, so adding a new bench script + log + csv
+# automatically shows up in the plots without changing this file.
+csv_paths <- list.files("results", pattern = "\\.csv$", full.names = TRUE)
+stopifnot(length(csv_paths) > 0)
 
-# how many were solved? -> text output
-print(factor(results$output_mata) %>% summary())
-print(factor(results$output_dodo) %>% summary())
-print("solved by mata, but not by dodo:")
-print(sum(results$output_mata %in% c("0", "1") & !(results$output_dodo %in% c("0", "1"))))
-print("solved by dodo, but not by mata:")
-print(sum(results$output_dodo %in% c("0", "1") & !(results$output_mata %in% c("0", "1"))))
+results <- map_dfr(csv_paths, function(p) {
+  read_csv(p, show_col_types = FALSE) |>
+    mutate(algorithm = tools::file_path_sans_ext(basename(p)))
+})
 
-# how fast were they solved?
-results %>%
-  pivot_longer(cols = c(time_mata, time_dodo), names_to = "column", values_to = "time") %>%
-  group_by(column) %>%
-  arrange(time) %>%
-  mutate(solved_cumulatively = row_number()) %>%
-  ggplot() +
-  geom_step(mapping = aes(x = time, color = column, y = solved_cumulatively)) +
+# Per-algorithm output summary (replaces the old hard-coded mata vs dodo prints).
+for (algo in sort(unique(results$algorithm))) {
+  cat("=== ", algo, " ===\n", sep = "")
+  print(factor(results$output[results$algorithm == algo]) |> summary())
+}
+
+# Cumulative plot: one geom_step per algorithm.
+results |>
+  filter(!is.na(time)) |>
+  mutate(time = as.numeric(time)) |>
+  arrange(algorithm, time) |>
+  group_by(algorithm) |>
+  mutate(solved_cumulatively = row_number()) |>
+  ungroup() |>
+  ggplot(aes(x = time, y = solved_cumulatively, color = algorithm)) +
+  geom_step() +
   xlab("time (s)") +
   ylab("number of instances solved in time") +
-  labs(color = "framework")
+  labs(color = "algorithm")
 ggsave("cumulative.png")
 
-results %>%
-  ggplot() +
-  geom_point(mapping = aes(x = time_mata, y = time_dodo, color = interpretation)) +
-  scale_x_log10() +
-  scale_y_log10() +
-  geom_function(fun = function(x) x) +
-  geom_function(fun = function(x) 10 * x, color = "green") +
-  geom_function(fun = function(x) 0.1 * x, color = "red")
-ggsave("comparison.png")
+# Pairwise scatter: pick the first algorithm alphabetically as the reference
+# x-axis and facet every other algorithm against it on y. Skipped if fewer
+# than two algorithms were found.
+if (length(csv_paths) >= 2) {
+  algos <- sort(unique(results$algorithm))
+  ref <- algos[1]
+  others <- algos[-1]
+
+  wide <- results |>
+    mutate(time = as.numeric(time)) |>
+    select(name, property, interpretation, algorithm, time) |>
+    pivot_wider(names_from = algorithm, values_from = time)
+
+  wide |>
+    pivot_longer(all_of(others), names_to = "algorithm", values_to = "time_other") |>
+    ggplot(aes(x = .data[[ref]], y = time_other, color = interpretation)) +
+    geom_point() +
+    scale_x_log10() +
+    scale_y_log10() +
+    geom_function(fun = function(x) x) +
+    geom_function(fun = function(x) 10 * x, color = "green") +
+    geom_function(fun = function(x) 0.1 * x, color = "red") +
+    facet_wrap(~ algorithm) +
+    xlab(paste0("time (s) — ", ref)) +
+    ylab("time (s) — other algorithm")
+  ggsave("comparison.png")
+}

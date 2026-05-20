@@ -55,7 +55,6 @@ Nfa compute_ind(const Nft& abstraction_framework, const Nft& transition_relation
         std::cout << "nft result of composition does not have 2 levels, need to handle.";
         throw 2;
     }
-    product1.alphabet = &abstract_alphabet;
     Nft preprojection {mata::nft::intersection(create_identity(abstract_alphabet), product1)};
     Nfa projection{ project(preprojection, 0) };
     Nfa ind{ mata::nfa::complement(projection, abstract_alphabet) };
@@ -83,7 +82,6 @@ Nft compute_preach_complement(const Nft& abstraction_framework, const Nft& trans
         throw 2;
     }
     Nft product {compose(v_id, v_complement)};
-    product.alphabet = &concrete_alphabet;
     if (product.levels.num_of_levels != 2) {
         std::cout << "nft result of composition does not have 2 levels, need to handle.";
         throw 2;
